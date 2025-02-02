@@ -22,7 +22,7 @@ Trash Compactor is a PowerShell script that compresses files from a specified so
 2. Run the script with the `install` argument:
 
     ```powershell
-    .\TrashCompactor.ps1 -action install
+    .\TrashCompactor.ps1 install
     ```
 
 3. Follow the prompts to configure the source folder, destination folder, and the number of versions to keep.
@@ -34,7 +34,7 @@ Trash Compactor is a PowerShell script that compresses files from a specified so
 2. Run the script with the `uninstall` argument:
 
     ```powershell
-    .\TrashCompactor.ps1 -action uninstall
+    .\TrashCompactor.ps1 uninstall
     ```
 
 3. The script will remove the scheduled task (if it exists) and delete the configuration file and the `.trash-compactor` directory.
