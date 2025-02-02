@@ -4,6 +4,7 @@ param (
 )
 
 function Install-TrashCompactor {
+
     # Define the path to the configuration file
     $configPath = "$env:USERPROFILE\.trash-compactor\config.ps1"
 
@@ -33,10 +34,35 @@ function Install-TrashCompactor {
     }
 
     # Create a copy of the current running script in the .trash-compactor folder
+    $scriptPath = "$PSScriptRoot\TrashCompactor.ps1"
     $destinationScriptPath = "$env:USERPROFILE\.trash-compactor\TrashCompactor.ps1"
-    Copy-Item -Path "$PSScriptRoot\TrashCompactor.ps1" -Destination $destinationScriptPath -Force
+    Copy-Item -Path $scriptPath -Destination $destinationScriptPath -Force
 
-    Write-Output "Trash Compactor has been installed and configured."
+    # Ask user if they want to create a scheduled task
+    Write-Output "A scheduled task can be created to run this script weekly. Administrator privileges are required. See docs for more information."
+    $createTask = Read-Host "Do you want to create a scheduled task to run this script weekly? (yes/no)"
+    if ($createTask -eq "yes") {
+
+        # Check if the script is running with elevated privileges
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (-Not $isAdmin) {
+            Write-Output "Error - This script requires administrator privileges to create a scheduled task."
+            Write-Output "Please run this script again as an administrator. See docs for more information."
+            Write-Output "Trash Compactor has been installed and configured."
+            exit
+        }
+
+        # Create a scheduled task to run the script every week
+        $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-File `"$destinationScriptPath`""
+        $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 9am
+        $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+        Register-ScheduledTask -TaskName "TrashCompactor" -Action $action -Trigger $trigger -Principal $principal -Settings $settings
+
+        Write-Output "Trash Compactor has been installed, configured, and scheduled to run weekly."
+    } else {
+        Write-Output "Trash Compactor has been installed and configured."
+    }
 }
 
 function Uninstall-TrashCompactor {
@@ -49,6 +75,24 @@ function Uninstall-TrashCompactor {
         Write-Output "Trash Compactor has been uninstalled and configuration removed."
     } else {
         Write-Output "Trash Compactor is not installed."
+    }
+
+    # Check if the scheduled task exists before removing it
+    $taskExists = Get-ScheduledTask -TaskName "TrashCompactor" -ErrorAction SilentlyContinue
+    if ($taskExists) {
+
+        # Check if the script is running with elevated privileges
+        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if (-Not $isAdmin) {
+            Write-Output "Error - This script requires administrator privileges to remove scheduled task."
+            Write-Output "Please run this script again as an administrator. See docs for more information."
+            exit
+        }
+
+        Unregister-ScheduledTask -TaskName "TrashCompactor" -Confirm:$false
+        Write-Output "Scheduled task for Trash Compactor has been removed."
+    } else {
+        Write-Output "Scheduled task for Trash Compactor does not exist."
     }
 }
 
@@ -70,7 +114,7 @@ if (-Not (Test-Path -Path $destinationZip)) {
 }
 
 # Get the current date and time
-$currentDateTime = Get-Date -Format "yyyyMMdd_HHmmss"
+$currentDateTime = Get-Date -Format "yyyy-MM-dd"
 $destinationZip = "$destinationZip\Archive_$currentDateTime.zip"
 
 # Create a new zip file
