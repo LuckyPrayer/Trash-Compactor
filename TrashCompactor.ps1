@@ -39,16 +39,17 @@ function Install-TrashCompactor {
     Copy-Item -Path $scriptPath -Destination $destinationScriptPath -Force
 
     # Ask user if they want to create a scheduled task
-    Write-Output "A scheduled task can be created to run this script weekly. Administrator privileges are required. See docs for more information."
+    Write-Host "A scheduled task can be created to run this script weekly. Administrator privileges are required. See docs for more information."
     $createTask = Read-Host "Do you want to create a scheduled task to run this script weekly? (yes/no)"
     if ($createTask -eq "yes") {
 
         # Check if the script is running with elevated privileges
         $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         if (-Not $isAdmin) {
-            Write-Output "Error - This script requires administrator privileges to create a scheduled task."
-            Write-Output "Please run this script again as an administrator. See docs for more information."
-            Write-Output "Trash Compactor has been installed and configured."
+            Write-Host ""
+            Write-Host "Error - This script requires administrator privileges to create a scheduled task." -ForegroundColor Red
+            Write-Host "Please run this script again as an administrator. See docs for more information."
+            Write-Host "Trash Compactor has been installed and configured without a scheduled task."
             exit
         }
 
@@ -59,9 +60,9 @@ function Install-TrashCompactor {
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
         Register-ScheduledTask -TaskName "TrashCompactor" -Action $action -Trigger $trigger -Principal $principal -Settings $settings
 
-        Write-Output "Trash Compactor has been installed, configured, and scheduled to run weekly."
+        Write-Host "Trash Compactor has been installed, configured, and scheduled to run weekly."
     } else {
-        Write-Output "Trash Compactor has been installed and configured."
+        Write-Host "Trash Compactor has been installed and configured."
     }
 }
 
@@ -69,31 +70,35 @@ function Uninstall-TrashCompactor {
     # Define the path to the configuration file
     $configPath = "$env:USERPROFILE\.trash-compactor\config.ps1"
 
-    # Remove the configuration file and the .trash-compactor directory
+    # Check if the configuration file exists before removing it
     if (Test-Path -Path $configPath) {
-        Remove-Item -Path (Split-Path $configPath) -Recurse -Force
-        Write-Output "Trash Compactor has been uninstalled and configuration removed."
-    } else {
-        Write-Output "Trash Compactor is not installed."
-    }
 
-    # Check if the scheduled task exists before removing it
-    $taskExists = Get-ScheduledTask -TaskName "TrashCompactor" -ErrorAction SilentlyContinue
-    if ($taskExists) {
+        # Check if the scheduled task exists before removing it
+        $taskExists = Get-ScheduledTask -TaskName "TrashCompactor" -ErrorAction SilentlyContinue
+        if ($taskExists) {
 
         # Check if the script is running with elevated privileges
         $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
         if (-Not $isAdmin) {
-            Write-Output "Error - This script requires administrator privileges to remove scheduled task."
-            Write-Output "Please run this script again as an administrator. See docs for more information."
+            Write-Host ""
+            Write-Host "Error - This script requires administrator privileges to remove scheduled task." -ForegroundColor Red
+            Write-Host "Please run this script again as an administrator. See docs for more information."
             exit
         }
 
-        Unregister-ScheduledTask -TaskName "TrashCompactor" -Confirm:$false
-        Write-Output "Scheduled task for Trash Compactor has been removed."
+            Unregister-ScheduledTask -TaskName "TrashCompactor" -Confirm:$false
+            Write-Host "Scheduled task for Trash Compactor has been removed."
+            } else {
+                Write-Host "Scheduled task for Trash Compactor does not exist."
+        }
+        # Remove the configuration file and the .trash-compactor directory
+        Remove-Item -Path (Split-Path $configPath) -Recurse -Force
+        Write-Host "Trash Compactor has been uninstalled and configuration removed."
+
     } else {
-        Write-Output "Scheduled task for Trash Compactor does not exist."
+        Write-Host "Trash Compactor is not installed."
     }
+
 }
 
 if ($action -eq "install") {
@@ -114,20 +119,20 @@ if (-Not (Test-Path -Path $destinationZip)) {
 }
 
 # Get the current date and time
-$currentDateTime = Get-Date -Format "yyyy-MM-dd"
+$currentDateTime = Get-Date -Format "yyyy-MM-dd_HH:mm"
 $destinationZip = "$destinationZip\Archive_$currentDateTime.zip"
 
 # Create a new zip file
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::CreateFromDirectory($sourceFolder, $destinationZip)
 
-Write-Output "All files in $sourceFolder have been moved to $destinationZip"
+Write-Host "All files in $sourceFolder have been moved to $destinationZip"
 
 # Remove all files and subfolders in the source folder
 Get-ChildItem -Path $sourceFolder -Recurse -File | Remove-Item -Force
 Get-ChildItem -Path $sourceFolder -Recurse -Directory | Remove-Item -Force
 
-Write-Output "All files and subfolders in $sourceFolder have been deleted"
+Write-Host "All files and subfolders in $sourceFolder have been deleted"
 
 # Keep only the specified number of recent zip files in the destination folder
 $zipFiles = Get-ChildItem -Path (Split-Path $destinationZip) -Filter "*.zip" | Sort-Object LastWriteTime -Descending
@@ -135,4 +140,4 @@ if ($zipFiles.Count -gt $versionsToKeep) {
     $zipFiles[$versionsToKeep..($zipFiles.Count - 1)] | ForEach-Object { Remove-Item -Path $_.FullName -Force }
 }
 
-Write-Output "Only the $versionsToKeep most recent zip files are kept in the destination folder"
+Write-Host "Only the $versionsToKeep most recent zip files are kept in the destination folder"
