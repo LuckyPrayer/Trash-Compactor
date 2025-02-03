@@ -22,8 +22,8 @@ function Install-TrashCompactor {
     if (-Not (Test-Path -Path $configPath)) {
         New-Item -ItemType Directory -Path (Split-Path $configPath) -Force
         @"
-`$sourceFolder = `"$sourceFolder\"
-`$destinationZip = `"$destinationZip\"
+`$sourceFolder = `"$sourceFolder"
+`$destinationZip = `"$destinationZip"
 `$versionsToKeep = $versionsToKeep
 "@ | Out-File -FilePath $configPath -Encoding UTF8
     }
@@ -119,8 +119,8 @@ if (-Not (Test-Path -Path $destinationZip)) {
 }
 
 # Get the current date and time
-$currentDateTime = Get-Date -Format "yyyy-MM-dd_HH:mm"
-$destinationZip = "$destinationZip\Archive_$currentDateTime.zip"
+$currentDateTime = Get-Date -Format "yyyy-MM-dd_HHmm"
+$destinationZip = $destinationZip+"Archive_$currentDateTime.zip"
 
 # Create a new zip file
 Add-Type -AssemblyName System.IO.Compression.FileSystem
