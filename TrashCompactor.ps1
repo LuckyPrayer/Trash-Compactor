@@ -39,24 +39,13 @@ function Install-TrashCompactor {
     Copy-Item -Path $scriptPath -Destination $destinationScriptPath -Force
 
     # Ask user if they want to create a scheduled task
-    Write-Host "A scheduled task can be created to run this script weekly. Administrator privileges are required. See docs for more information."
     $createTask = Read-Host "Do you want to create a scheduled task to run this script weekly? (yes/no)"
     if ($createTask -eq "yes") {
-
-        # Check if the script is running with elevated privileges
-        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        if (-Not $isAdmin) {
-            Write-Host ""
-            Write-Host "Error - This script requires administrator privileges to create a scheduled task." -ForegroundColor Red
-            Write-Host "Please run this script again as an administrator. See docs for more information."
-            Write-Host "Trash Compactor has been installed and configured without a scheduled task."
-            exit
-        }
 
         # Create a scheduled task to run the script every week
         $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-File `"$destinationScriptPath`""
         $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 9am
-        $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+        $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
         Register-ScheduledTask -TaskName "TrashCompactor" -Action $action -Trigger $trigger -Principal $principal -Settings $settings
 
@@ -76,16 +65,6 @@ function Uninstall-TrashCompactor {
         # Check if the scheduled task exists before removing it
         $taskExists = Get-ScheduledTask -TaskName "TrashCompactor" -ErrorAction SilentlyContinue
         if ($taskExists) {
-
-        # Check if the script is running with elevated privileges
-        $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        if (-Not $isAdmin) {
-            Write-Host ""
-            Write-Host "Error - This script requires administrator privileges to remove scheduled task." -ForegroundColor Red
-            Write-Host "Please run this script again as an administrator. See docs for more information."
-            exit
-        }
-
             Unregister-ScheduledTask -TaskName "TrashCompactor" -Confirm:$false
             Write-Host "Scheduled task for Trash Compactor has been removed."
             } else {
