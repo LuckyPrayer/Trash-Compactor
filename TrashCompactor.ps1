@@ -36,7 +36,7 @@ function Install-TrashCompactor {
     # Create a copy of the current running script in the .trash-compactor folder
     $scriptPath = "$PSScriptRoot\TrashCompactor.ps1"
     $destinationScriptPath = "$env:USERPROFILE\.trash-compactor\TrashCompactor.ps1"
-    Copy-Item -Path $scriptPath -Destination $destinationScriptPath -Force
+    Copy-Item -Path $scriptPath -Destination $destinationScriptPath -Recurse -Force
 
     # Ask user if they want to create a scheduled task
     $createTask = Read-Host "Do you want to create a scheduled task to run this script weekly? (yes/no)"
@@ -108,8 +108,8 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 Write-Host "All files in $sourceFolder have been moved to $destinationZip"
 
 # Remove all files and subfolders in the source folder
-Get-ChildItem -Path $sourceFolder -Recurse -File | Remove-Item -Force
-Get-ChildItem -Path $sourceFolder -Recurse -Directory | Remove-Item -Force
+Get-ChildItem -Path $sourceFolder -Recurse -File | Remove-Item -Force -Recurse
+Get-ChildItem -Path $sourceFolder -Recurse -Directory | Remove-Item -Force -Recurse
 
 Write-Host "All files and subfolders in $sourceFolder have been deleted"
 
